@@ -7,171 +7,225 @@
   <link rel="stylesheet" href="/css/styles.css">
 </head>
 <body>
-  <header class="topbar">
-    <div class="brand">
-      <span class="brand-icon">⏱</span>
-      <div><strong>Controle de Horas</strong><small>Seu trabalho, suas contas.</small></div>
+
+  <!-- TELA 1: TELA DEDICADA DE LOGIN E CADASTRO -->
+  <div id="authScreen" class="auth-screen">
+    <div class="auth-card">
+      <div class="brand-center">
+        <span class="brand-icon">⏱</span>
+        <h2>Controle de Horas</h2>
+        <p>Acesse sua conta para gerenciar seus rendimentos</p>
+      </div>
+
+      <!-- Formulário de Login -->
+      <form id="loginForm">
+        <div class="form-group">
+          <label for="loginEmail">E-mail</label>
+          <input type="email" id="loginEmail" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label for="loginSenha">Senha</label>
+          <input type="password" id="loginSenha" required placeholder="******">
+        </div>
+        <button type="submit" class="btn btn-primary btn-full" style="margin-top: 18px;">Entrar na Conta</button>
+        <p class="auth-toggle">Ainda não tem conta? <a id="switchToRegister">Cadastre-se</a></p>
+      </form>
+
+      <!-- Formulário de Cadastro -->
+      <form id="registerForm" class="hidden">
+        <div class="form-group">
+          <label for="regNome">Nome Completo</label>
+          <input type="text" id="regNome" required placeholder="Seu Nome">
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label for="regEmail">E-mail</label>
+          <input type="email" id="regEmail" required placeholder="seu@email.com">
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label for="regTelefone">WhatsApp (com DDD ex: 5511999999999)</label>
+          <input type="text" id="regTelefone" required placeholder="5511999999999">
+        </div>
+        <div class="form-group" style="margin-top: 12px;">
+          <label for="regSenha">Senha</label>
+          <input type="password" id="regSenha" required placeholder="******">
+        </div>
+        <button type="submit" class="btn btn-accent btn-full" style="margin-top: 18px;">Criar Conta</button>
+        <p class="auth-toggle">Já possui conta? <a id="switchToLogin">Faça Login</a></p>
+      </form>
     </div>
-    <span class="rate-pill" id="rateDisplay">R$ 13,00 / hora</span>
-  </header>
+  </div>
 
-  <main class="container">
-    <section class="intro">
-      <p class="eyebrow">CONTROLE PESSOAL</p>
-      <h1>Suas horas, peças e bônus. <span>Seu dinheiro.</span></h1>
-      <p>Cole sua anotação do WhatsApp (horas, peças ou bônus) e filtre por período.</p>
-    </section>
-
-    <!-- Resumo dos registros salvos no MySQL -->
-    <section class="summary-grid" aria-label="Resumo">
-      <article class="summary-card">
-        <span class="summary-label">Horas / Tempo</span>
-        <strong id="totalHours">0h 00min</strong>
-        <small>Tempo líquido no período</small>
-      </article>
-      <article class="summary-card">
-        <span class="summary-label">Total a receber</span>
-        <strong id="totalPay">R$ 0,00</strong>
-        <small>Horas + Peças + Bônus</small>
-      </article>
-      <article class="summary-card">
-        <span class="summary-label">Registos filtrados</span>
-        <strong id="totalDays">0</strong>
-        <small>Linhas no período selecionado</small>
-      </article>
-    </section>
-
-    <!-- Etapa 1: Entrada de texto -->
-    <section class="panel input-panel">
-      <div class="section-heading">
-        <div><p class="eyebrow">NOVO REGISTRO</p><h2>Cole sua mensagem</h2></div>
-        <span class="step">01</span>
+  <!-- TELA 2: DASHBOARD PRINCIPAL (Exibida somente após o Login) -->
+  <div id="appScreen" class="hidden">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-icon">⏱</span>
+        <div><strong>Controle de Horas</strong><small>Seu trabalho, suas contas.</small></div>
       </div>
-      <p class="muted">Aceita horas, peças produzidas (ex: 50 peças a R$ 2,50) e bônus (ex: bônus R$ 50,00).</p>
-      <textarea id="messageInput" rows="9" placeholder="Terça&#10;&#10;15:50h às 22:45h&#10;*20 minutos janta*&#10;&#10;Quarta&#10;50 peças a R$ 2,50&#10;&#10;Quinta&#10;Bônus R$ 50,00 extra de produção"></textarea>
       
-      <div class="form-row">
-        <label class="field-label" for="weekDate">Data de referência (opcional)
-          <input id="weekDate" type="date">
-        </label>
-        <label class="field-label" for="defaultRate">Valor por hora padrão
-          <div class="input-suffix">
-            <span>R$</span>
-            <input id="defaultRate" type="number" min="0" step="0.01" value="13.00">
+      <div style="display: flex; align-items: center; gap: 15px;">
+        <span class="rate-pill" id="rateDisplay">R$ 13,00 / h</span>
+        <div id="userInfoDisplay"></div>
+        <button class="btn btn-danger-quiet btn-small" id="logoutBtn">Sair</button>
+      </div>
+    </header>
+
+    <main class="container">
+      <section class="intro">
+        <p class="eyebrow">PAINEL PESSOAL</p>
+        <h1>Seus lançamentos. <span>Seu controle.</span></h1>
+        <p>Anotações sincronizadas do seu WhatsApp ou inseridas manualmente.</p>
+      </section>
+
+      <!-- Resumo de Métricas -->
+      <section class="summary-grid">
+        <article class="summary-card">
+          <span class="summary-label">Horas / Tempo</span>
+          <strong id="totalHours">0h 00min</strong>
+          <small>Tempo líquido acumulado</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Total a receber</span>
+          <strong id="totalPay">R$ 0,00</strong>
+          <small>Horas + Peças + Bônus</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Seus Registros</span>
+          <strong id="totalDays">0</strong>
+          <small>Lançamentos nesta conta</small>
+        </article>
+      </section>
+
+      <!-- Entrada Manual -->
+      <section class="panel input-panel">
+        <div class="section-heading">
+          <div><p class="eyebrow">NOVO REGISTRO</p><h2>Cole sua mensagem</h2></div>
+          <span class="step">01</span>
+        </div>
+        <textarea id="messageInput" rows="6" placeholder="Terça 15/10/2026&#10;15:50h às 22:45h&#10;*20 min janta*"></textarea>
+        
+        <div class="form-row">
+          <label class="field-label" for="weekDate">Data de referência
+            <input id="weekDate" type="date">
+          </label>
+          <label class="field-label" for="defaultRate">Valor por hora
+            <div class="input-suffix">
+              <span>R$</span>
+              <input id="defaultRate" type="number" min="0" step="0.01" value="13.00">
+            </div>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button class="btn btn-primary" id="analyzeBtn">Interpretar mensagem</button>
+          <button class="btn btn-quiet" id="clearInputBtn">Limpar</button>
+        </div>
+      </section>
+
+      <!-- Painel de Revisão -->
+      <section class="panel preview-panel hidden" id="previewPanel">
+        <div class="section-heading">
+          <div><p class="eyebrow">REVISÃO</p><h2>Confira antes de salvar</h2></div>
+          <span class="step">02</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Dia</th>
+                <th>Tipo</th>
+                <th>Horário / Qtd</th>
+                <th>Horas / Tempo</th>
+                <th>Valor Total</th>
+                <th>Observações</th>
+              </tr>
+            </thead>
+            <tbody id="previewRows"></tbody>
+          </table>
+        </div>
+        <div class="preview-total">
+          <div><span>Tempo total</span><strong id="previewHours">0h 00min</strong></div>
+          <div><span>Valor estimado</span><strong id="previewPay">R$ 0,00</strong></div>
+        </div>
+        <div class="actions">
+          <button class="btn btn-primary" id="saveBtn">Salvar em minha conta</button>
+          <button class="btn btn-quiet" id="cancelPreviewBtn">Cancelar</button>
+        </div>
+      </section>
+
+      <!-- Histórico Isolado do Usuário -->
+      <section class="panel history-panel">
+        <div class="section-heading">
+          <div><p class="eyebrow">MEU HISTÓRICO</p><h2>Seus Registros Salvos</h2></div>
+          <button class="btn btn-outline btn-small" id="exportBtn">Exportar CSV</button>
+        </div>
+
+        <!-- Filtros -->
+        <div class="filter-bar">
+          <div class="filter-group">
+            <label for="filtroDiaSemana">Dia:</label>
+            <select id="filtroDiaSemana">
+              <option value="">Todos</option>
+              <option value="Segunda">Segunda-feira</option>
+              <option value="Terça">Terça-feira</option>
+              <option value="Quarta">Quarta-feira</option>
+              <option value="Quinta">Quinta-feira</option>
+              <option value="Sexta">Sexta-feira</option>
+              <option value="Sábado">Sábado</option>
+              <option value="Domingo">Domingo</option>
+            </select>
           </div>
-        </label>
-      </div>
 
-      <div class="actions">
-        <button class="btn btn-primary" id="analyzeBtn">Interpretar mensagem</button>
-        <button class="btn btn-quiet" id="clearInputBtn">Limpar</button>
-      </div>
-    </section>
+          <div class="filter-group">
+            <label for="filtroDataExacta">Data Exata:</label>
+            <input type="date" id="filtroDataExacta">
+          </div>
 
-    <!-- Etapa 2: Painel de Revisão / Preview -->
-    <section class="panel preview-panel hidden" id="previewPanel">
-      <div class="section-heading">
-        <div><p class="eyebrow">REVISÃO</p><h2>Confira antes de salvar no MySQL</h2></div>
-        <span class="step">02</span>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead>
-            <tr>
-              <th>Dia</th>
-              <th>Tipo</th>
-              <th>Horário / Qtd</th>
-              <th>Horas / Tempo</th>
-              <th>Valor Total</th>
-              <th>Observações</th>
-            </tr>
-          </thead>
-          <tbody id="previewRows"></tbody>
-        </table>
-      </div>
-      <div class="preview-total">
-        <div><span>Tempo total</span><strong id="previewHours">0h 00min</strong></div>
-        <div><span>Valor estimado</span><strong id="previewPay">R$ 0,00</strong></div>
-      </div>
-      <div class="actions">
-        <button class="btn btn-primary" id="saveBtn">Salvar registros no MySQL</button>
-        <button class="btn btn-quiet" id="cancelPreviewBtn">Cancelar</button>
-      </div>
-    </section>
+          <div class="filter-group">
+            <label for="filtroInicio">De:</label>
+            <input type="date" id="filtroInicio">
+          </div>
 
-    <!-- Histórico com Filtro por Período -->
-    <section class="panel history-panel">
-      <div class="section-heading">
-        <div><p class="eyebrow">SEU HISTÓRICO</p><h2>Filtrar Por Período & Registos Salvos</h2></div>
-        <button class="btn btn-outline btn-small" id="exportBtn">Exportar CSV</button>
-      </div>
+          <div class="filter-group">
+            <label for="filtroFim">Até:</label>
+            <input type="date" id="filtroFim">
+          </div>
 
-     <!-- BARRA DE FILTRO POR DATA E DIA -->
-      <div class="filter-bar">
-        <div class="filter-group">
-          <label for="filtroDiaSemana">Dia da Semana:</label>
-          <select id="filtroDiaSemana">
-            <option value="">Todos os dias</option>
-            <option value="Segunda">Segunda-feira</option>
-            <option value="Terça">Terça-feira</option>
-            <option value="Quarta">Quarta-feira</option>
-            <option value="Quinta">Quinta-feira</option>
-            <option value="Sexta">Sexta-feira</option>
-            <option value="Sábado">Sábado</option>
-            <option value="Domingo">Domingo</option>
-          </select>
+          <button class="btn btn-primary btn-small" id="btnFiltrarPeriodo">🔎 Filtrar</button>
+          <button class="btn btn-quiet btn-small" id="btnLimparFiltroPeriodo">Limpar</button>
         </div>
 
-        <div class="filter-group">
-          <label for="filtroDataExacta">Data Exata:</label>
-          <input type="date" id="filtroDataExacta">
+        <div class="history-controls">
+          <input id="searchInput" type="search" placeholder="Buscar por palavra-chave...">
+          <button class="btn btn-danger-quiet btn-small" id="clearHistoryBtn">Apagar histórico</button>
         </div>
 
-        <div class="filter-group">
-          <label for="filtroInicio">De:</label>
-          <input type="date" id="filtroInicio">
+        <div id="historyEmpty" class="empty-state">
+          <span>◷</span>
+          <strong>Nenhum registro encontrado nesta conta</strong>
+          <p>Seus lançamentos salvos ou enviados pelo WhatsApp aparecerão aqui.</p>
         </div>
 
-        <div class="filter-group">
-          <label for="filtroFim">Até:</label>
-          <input type="date" id="filtroFim">
+        <div class="table-wrap" id="historyTableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Dia / Data</th>
+                <th>Modalidade</th>
+                <th>Horário / Detalhe</th>
+                <th>Tempo / Qtd</th>
+                <th>Valor (R$)</th>
+                <th>Observações</th>
+                <th>Ações</th>
+              </tr>
+            </thead>
+            <tbody id="historyRows"></tbody>
+          </table>
         </div>
-
-        <button class="btn btn-primary btn-small" id="btnFiltrarPeriodo">🔎 Filtrar</button>
-        <button class="btn btn-quiet btn-small" id="btnLimparFiltroPeriodo">Limpar Filtros</button>
-      </div>
-
-      <div class="history-controls">
-        <input id="searchInput" type="search" placeholder="Buscar por palavra-chave nas observações...">
-        <button class="btn btn-danger-quiet btn-small" id="clearHistoryBtn">Apagar histórico do Banco</button>
-      </div>
-
-      <div id="historyEmpty" class="empty-state">
-        <span>◷</span>
-        <strong>Nenhum registro encontrado para este período</strong>
-        <p>Ajuste as datas ou interprete uma nova mensagem.</p>
-      </div>
-
-      <div class="table-wrap" id="historyTableWrap">
-        <table>
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Dia / Data</th>
-              <th>Modalidade</th>
-              <th>Horário / Detalhe</th>
-              <th>Tempo / Qtd</th>
-              <th>Valor (R$)</th>
-              <th>Observações</th>
-              <th>Ações</th>
-            </tr>
-          </thead>
-          <tbody id="historyRows"></tbody>
-        </table>
-      </div>
-    </section>
-    <footer>Controle de Horas · Conectado ao Java Spring Boot & MySQL</footer>
-  </main>
+      </section>
+    </main>
+  </div>
 
   <div id="toast" role="status" class="toast hidden"></div>
 

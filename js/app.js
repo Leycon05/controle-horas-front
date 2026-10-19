@@ -5,11 +5,11 @@
   let records = [];
 
   function money(value) {
-    return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    return (value || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
   }
 
   function duration(mins) {
-    const h = Math.floor(mins / 60), m = mins % 60;
+    const h = Math.floor((mins || 0) / 60), m = (mins || 0) % 60;
     return `${h}h ${String(m).padStart(2, '0')}min`;
   }
 
@@ -33,42 +33,71 @@
     showToast.timer = setTimeout(() => toast.classList.add('hidden'), 3000);
   }
 
-  async function carregarHistorico() {
-    const dataExacta = $('filtroDataExacta').value;
-    const diaSemana = $('filtroDiaSemana').value;
-    const inicio = $('filtroInicio').value;
-    const fim = $('filtroFim').value;
+  // --- NAVEGAÇÃO DE TELA E AUTENTICAÇÃO ---
+  function verificarAutenticacao() {
+    const usuario = ApiService.getUsuarioLogado();
 
-    try {
-      records = await ApiService.obterRegistros(dataExacta, diaSemana, inicio, fim);
-      renderHistory();
-    } catch (err) {
-      showToast('⚠️ Erro ao conectar com o servidor Java.');
+    if (usuario) {
+      $('authScreen').classList.add('hidden');
+      $('appScreen').classList.remove('hidden');$('userInfoDisplay').innerHTML = `👤 <strong>${escapeHtml(usuario.nome)}</strong>`;
+      carregarHistorico();
+    } else {
+      $('appScreen').classList.add('hidden');$('authScreen').classList.remove('hidden');
     }
   }
 
-  $('btnFiltrarPeriodo').addEventListener('click', carregarHistorico);
-
-  $('btnLimparFiltroPeriodo').addEventListener('click', () => {
-    $('filtroDataExacta').value = '';$('filtroDiaSemana').value = '';
-    $('filtroInicio').value = '';$('filtroFim').value = '';
-    carregarHistorico();
+  $('logoutBtn').addEventListener('click', () => {
+    ApiService.clearToken();
+    verificarAutenticacao();
+    showToast('Sua sessão foi encerrada.');
   });
 
-  // Mensagem de exemplo pronta com datas escritas no próprio texto
-  $('messageInput').value = `Terça 15/10/2026
+  $('switchToRegister').addEventListener('click', () => {
+    $('loginForm').classList.add('hidden');$('registerForm').classList.remove('hidden');
+  });
 
-15:50h às 22:45h
-*20 minutos janta*
+  $('switchToLogin').addEventListener('click', () => {
+    $('registerForm').classList.add('hidden');$('loginForm').classList.remove('hidden');
+  });
 
-Quarta 16/10/2026
+  $('loginForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      const data = await ApiService.login($('loginEmail').value, $('loginSenha').value);
+      ApiService.setToken(data.token);
+      ApiService.setUsuarioLogado(data.usuario);
+      verificarAutenticacao();
+      showToast(`Bem-vindo, ${data.usuario.nome}!`);
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  });
 
-50 peças a R$ 2,50
+  $('registerForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    try {
+      await ApiService.registrar($('regNome').value, $('regEmail').value, $('regSenha').value, $('regTelefone').value);
+      showToast('Conta criada com sucesso! Faça login.');
+      $('switchToLogin').click();
+    } catch (err) {
+      showToast(`⚠️ ${err.message}`);
+    }
+  });
 
-Quinta (17/10)
-
-8:20h às 17:50h
-*1h de almoço*`;
+  // --- CARREGAR E RENDERIZAR REGISTROS DO USUÁRIO ---
+  async function carregarHistorico() {
+    try {
+      records = await ApiService.obterRegistros(
+        $('filtroDataExacta').value,
+        $('filtroDiaSemana').value,
+        $('filtroInicio').value,
+        $('filtroFim').value
+      );
+      renderHistory();
+    } catch (err) {
+      showToast('⚠️ Erro ao buscar registros.');
+    }
+  }
 
   function renderSummary() {
     const totalMins = records.reduce((sum, r) => sum + (r.totalMinutos || 0), 0);
@@ -83,7 +112,7 @@ Quinta (17/10)
     $('previewPanel').classList.remove('hidden');
 
     if (!pendingRecords.length) {
-      $('previewRows').innerHTML = '<tr><td colspan="6">Nenhum registro válido identificado para revisão.</td></tr>';
+      $('previewRows').innerHTML = '<tr><td colspan="6">Nenhum registro válido identificado.</td></tr>';
       $('saveBtn').disabled = true;
       $('previewHours').textContent = duration(0);
       $('previewPay').textContent = money(0); } else {$('saveBtn').disabled = false;
@@ -140,11 +169,11 @@ Quinta (17/10)
   }
 
   window.excluirReg = async (id) => {
-    if (confirm(`Deseja excluir o registro #${id} da base de dados?`)) {
+    if (confirm(`Deseja excluir o registro #${id}?`)) {
       try {
         await ApiService.excluirRegistro(id);
         await carregarHistorico();
-        showToast('Registro excluído do MySQL.');
+        showToast('Registro excluído.');
       } catch (err) {
         showToast('Erro ao excluir registro.');
       }
@@ -154,17 +183,12 @@ Quinta (17/10)
   // Event Listeners
   $('analyzeBtn').addEventListener('click', async () => {
     const texto = $('messageInput').value.trim();
-    const valorHora = Number($('defaultRate').value);
-    const dataRef = $('weekDate').value;
-
-    if (!texto) { showToast('Cole a mensagem do WhatsApp primeiro.'); return; }
-
+    if (!texto) { showToast('Cole a mensagem primeiro.'); return; }
     try {
-      const parsed = await ApiService.interpretarTexto(texto, valorHora, dataRef);
+      const parsed = await ApiService.interpretarTexto(texto, Number($('defaultRate').value),$('weekDate').value);
       renderPreview(parsed);
-      showToast('Mensagem interpretada com sucesso!');
     } catch (err) {
-      showToast('Erro ao interpretar mensagem no servidor.');
+      showToast('Erro ao interpretar mensagem.');
     }
   });
 
@@ -172,8 +196,7 @@ Quinta (17/10)
     $('messageInput').value = '';$('previewPanel').classList.add('hidden');
   });
 
-  $('cancelPreviewBtn').addEventListener('click', () => {$('previewPanel').classList.add('hidden');
-  });
+  $('cancelPreviewBtn').addEventListener('click', () =>$('previewPanel').classList.add('hidden'));
 
   $('saveBtn').addEventListener('click', async () => {
     if (!pendingRecords.length) return;
@@ -181,15 +204,16 @@ Quinta (17/10)
       await ApiService.salvarLote(pendingRecords);
       $('previewPanel').classList.add('hidden');
       await carregarHistorico();
-      showToast(`${pendingRecords.length} registro(s) salvo(s) no MySQL!`);
+      showToast(`${pendingRecords.length} registro(s) salvo(s)!`);
     } catch (err) {
-      showToast('Erro ao gravar registros no banco de dados.');
+      showToast('Erro ao gravar registros.');
     }
   });
 
   $('btnFiltrarPeriodo').addEventListener('click', carregarHistorico);
 
   $('btnLimparFiltroPeriodo').addEventListener('click', () => {
+    $('filtroDataExacta').value = '';$('filtroDiaSemana').value = '';
     $('filtroInicio').value = '';$('filtroFim').value = '';
     carregarHistorico();
   });
@@ -197,44 +221,17 @@ Quinta (17/10)
   $('searchInput').addEventListener('input', renderHistory);
 
   $('clearHistoryBtn').addEventListener('click', async () => {
-    if (!records.length) { showToast('O histórico já está vazio.'); return; }
-    if (!confirm('Tem certeza que deseja apagar TODOS os registros do MySQL?')) return;
+    if (!records.length) return;
+    if (!confirm('Deseja apagar os registros desta conta?')) return;
     try {
       await ApiService.limparHistorico();
       await carregarHistorico();
-      showToast('Histórico limpo do MySQL.');
+      showToast('Histórico limpo.');
     } catch (err) {
       showToast('Erro ao limpar histórico.');
     }
   });
 
-  $('exportBtn').addEventListener('click', () => {
-    if (!records.length) { showToast('Não há registros para exportar.'); return; }
-    const header = ['ID', 'Dia', 'Data', 'Modalidade', 'Entrada', 'Saida', 'Pecas', 'Bonus', 'Horas_liquidas', 'Valor_total', 'Observacoes'];
-    const rows = records.map(r => [
-      r.id, r.diaSemana, r.dataConcreta || '', r.modalidade || '', r.horaEntrada || '', r.horaSaida || '',
-      r.quantidadePecas || 0, r.valorBonus || 0, r.tempoFormatado || '', r.valorTotal, r.observacao || ''
-    ]);
-    
-    const csv = [header, ...rows].map(row => row.map(v => `"${String(v ?? '').replace(/"/g, '""')}"`).join(';')).join('\r\n');
-    const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob), a = document.createElement('a');
-    a.href = url; a.download = 'controle-de-horas-periodo.csv'; a.click(); URL.revokeObjectURL(url);
-  });
-
-  // Exemplo preenchido com Horas, Peças e Bônus
-  $('messageInput').value = `Terça
-
-15:50h às 22:45h
-*20 minutos janta*
-
-Quarta
-
-50 peças a R$ 2,50
-
-Quinta
-
-Bônus R$ 50,00 extra de produção`;
-
-  carregarHistorico();
+  // Inicialização
+  verificarAutenticacao();
 })();

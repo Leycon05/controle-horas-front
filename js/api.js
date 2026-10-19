@@ -1,4 +1,7 @@
-const API_BASE_URL = 'http://localhost:8080/api';
+// Detecta se está rodando localmente ou na nuvem (Vercel)
+const API_BASE_URL = (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+  ? 'http://localhost:8080/api'
+  : 'https://controle-horas-backend.onrender.com/api';
 
 const ApiService = {
   getToken() { return localStorage.getItem('jwt_token'); },
